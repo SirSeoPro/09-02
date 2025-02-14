@@ -110,9 +110,49 @@ backend http_back
 
 ### Ответ:
 
+Запустим аналогичный третий сервер на порту 8003.
+Оттредактируем конфигурацию HAProxy:
+```
+global
+    log /dev/log    local0
+    log /dev/log    local1 notice
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+    stats timeout 30s
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log     global
+    mode    http
+    option  httplog
+    timeout connect 5000ms
+    timeout client  50000ms
+    timeout server  50000ms
+
+frontend http_front
+    bind *:80
+    acl is_example_local hdr(host) -i example.local
+    use_backend http_back if is_example_local
+
+backend http_back
+    balance roundrobin
+    server server1 127.0.0.1:8001 weight 2 check
+    server server2 127.0.0.1:8002 weight 3 check
+    server server3 127.0.0.1:8003 weight 4 check
+```
+
+В /etc/hosts добавим строку:
+```
+127.0.0.1 example.local
+```
+
+используем curl, что бы убедиться, что происходит балансировка нагрузки (так же обратим внимание, что запросы по ip не обрабатываются):
+
 <details>
 
-![image2](https://github.com/SirSeoPro/09-02/blob/main/1.png)
+![image2](https://github.com/SirSeoPro/09-02/blob/main/2.png)
 
 </details>
 
