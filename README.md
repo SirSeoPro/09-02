@@ -10,6 +10,94 @@
 
 <details>
 
+Создайте два файла, server1.py и server2.py, с содержимым:
+
+```
+
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'Hello from server 1')
+
+server_address = ('', 8001)
+httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
+httpd.serve_forever()
+
+```
+
+и
+
+```
+
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'Hello from server 2')
+
+server_address = ('', 8002)
+httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
+httpd.serve_forever()
+
+```
+
+Запустим серверы на в двух терминалах. Сервера будут работать на 8001 и 8002 порту. 
+
+```
+
+python3 server1.py
+python3 server2.py
+
+```
+
+Установим и настроим HAProxy
+
+```
+sudo apt install haproxy
+sudo nano /etc/haproxy/haproxy.cfg
+
+```
+
+Конфигурация: 
+
+```
+
+global
+    log /dev/log    local0
+    log /dev/log    local1 notice
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+    stats timeout 30s
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log     global
+    mode    tcp
+    option  tcplog
+    timeout connect 5000ms
+    timeout client  50000ms
+    timeout server  50000ms
+
+frontend http_front
+    bind *:80
+    default_backend http_back
+
+backend http_back
+    balance roundrobin
+    server server1 127.0.0.1:8001 check
+    server server2 127.0.0.1:8002 check
+
+```
+
+Перезапустим HAProxy и выполним несколько раз curl localhost, что бы посмотреть, какие порты нам отвечают:
+
 ![image1](https://github.com/SirSeoPro/09-02/blob/main/1.png)
 
 </details>
